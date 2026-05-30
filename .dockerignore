@@ -1,0 +1,8 @@
+# The builder image is built from builder/ only (see builder/Dockerfile), so
+# keep large, irrelevant paths out of the Docker build context. (Widgets/ is
+# mounted at runtime, not copied into the image.)
+**/node_modules/
+.git/
+.github/
+build/
+Widgets/

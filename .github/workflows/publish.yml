@@ -1,59 +1,111 @@
+# Rebuilds the widget catalog and syncs it to the live Cloudflare R2 bucket on
+# every relevant push to main. It builds the builder from the merged sources
+# (so the published catalog always reflects the current builder + schema) and
+# does NOT depend on the separately-published ghcr image. Publishing the ghcr
+# image is handled by builder-image.yml, gated on builder/ changes.
 name: Publish to Cloudflare R2
 
 on:
   push:
     branches:
       - main
+    # The catalog only changes when widget content, the builder, or how we run
+    # it changes. Skip pure docs / unrelated-workflow edits.
+    paths:
+      - 'Widgets/**'
+      - 'builder/**'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+      - '.github/workflows/publish.yml'
   workflow_dispatch:
+
+# Only reads the repo: it builds locally and pushes no image.
+permissions:
+  contents: read
+
+# Serialize publishes so two runs never race on the bucket. Queue rather than
+# cancel, so an in-flight rclone sync finishes cleanly instead of being killed
+# mid-delete and leaving the live catalog torn.
+concurrency:
+  group: publish-r2
+  cancel-in-progress: false
+
+env:
+  # Tag the locally built image to match docker-compose's `image:` so the run
+  # step uses exactly this freshly built image (no pull, no rebuild).
+  BUILDER_IMAGE: ghcr.io/beyond-all-reason/bar-workshop-builder:latest
+  MAX_WIDGET_SIZE_BYTES: 5242880 # 5 MiB
+  R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+  R2_ACCESS_KEY_ID: ${{ vars.R2_ACCESS_KEY_ID }}
+  R2_BUCKET: ${{ vars.R2_BUCKET }}
+  RCLONE_CONFIG_R2_TYPE: s3
+  RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+  RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ vars.R2_ACCESS_KEY_ID }}
+  RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  RCLONE_CONFIG_R2_ENDPOINT: https://${{ vars.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+  RCLONE_CONFIG_R2_REGION: auto
 
 jobs:
   publish:
+    name: Build catalog and sync to R2
     runs-on: ubuntu-latest
     steps:
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: 'recursive'
 
-      - name: Build 'build' folder
-        run: |
-          docker compose run --rm builder
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Sanity check before we accidentally nuke the bucket
+      - name: Build builder image from source
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: builder/Dockerfile
+          load: true
+          tags: ${{ env.BUILDER_IMAGE }}
+          # Shared cache with pr-check.yml and builder-image.yml.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build catalog into build/
+        run: docker compose run --rm builder
+
+      - name: Sanity check before we touch the bucket
         run: |
-          if [ -z "$(ls -A build/)" ]; then
-            echo "Build directory is empty, aborting."
+          if [ -z "$(ls -A build/)" ] || [ ! -f build/manifests.json ]; then
+            echo "Build output missing or empty (no build/manifests.json), aborting."
             exit 1
           fi
 
-      - name: Update CA certificates and OpenSSL
+      - name: Check R2 configuration
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ca-certificates openssl
+          : "${R2_ACCOUNT_ID:?Set repository variable R2_ACCOUNT_ID}"
+          : "${R2_ACCESS_KEY_ID:?Set repository variable R2_ACCESS_KEY_ID}"
+          : "${R2_BUCKET:?Set repository variable R2_BUCKET}"
+          : "${RCLONE_CONFIG_R2_SECRET_ACCESS_KEY:?Set repository secret R2_SECRET_ACCESS_KEY}"
 
       - name: Install rclone
         run: |
-          curl https://rclone.org/install.sh | sudo bash
+          set -o pipefail
+          curl -fsSL https://rclone.org/install.sh | sudo bash
 
-      - name: Configure rclone for R2
-        run: |
-          mkdir -p ~/.config/rclone
-          cat > ~/.config/rclone/rclone.conf <<EOF
-          [r2]
-          type = s3
-          provider = Cloudflare
-          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
-          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          endpoint = https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com/bar-workshop
-          region = auto
-          EOF
-
+      # --delete-after: extraneous objects are removed only after every upload
+      #   succeeds, minimizing the window where the live catalog is incomplete.
+      # --retries / --low-level-retries: restore resilience to transient R2
+      #   503/SlowDown responses (passing 0 silently clamps to 1, i.e. no retry).
+      # --checksum: decide uploads by content hash, not mtime (which differs
+      #   across container rebuilds).
       - name: Upload build/ to Cloudflare R2 with rclone
         run: |
-          rclone sync build r2:${{ secrets.R2_BUCKET }}/ --fast-list --retries 0 --low-level-retries 0 --delete-during
+          rclone sync build "r2:${R2_BUCKET}/" \
+            --fast-list \
+            --checksum \
+            --retries 3 \
+            --low-level-retries 10 \
+            --delete-after
+
+      # Fail the job if anything we meant to publish is missing or mismatched.
+      - name: Verify the bucket matches build/
+        run: rclone check build "r2:${R2_BUCKET}/" --one-way --fast-list

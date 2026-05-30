@@ -7,5 +7,7 @@ services:
       dockerfile: builder/Dockerfile
     volumes:
       - ./build:/app/build
-      - ./Widgets:/app/Widgets
+      - ./Widgets:/app/Widgets:ro # the builder only reads widgets; it writes to build/
+    environment:
+      - MAX_WIDGET_SIZE_BYTES=${MAX_WIDGET_SIZE_BYTES:-5242880} # 5 MiB
     profiles: ['tool'] # we don't want to run this with docker compose up

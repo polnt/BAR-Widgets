@@ -7,6 +7,9 @@
             "label": "build",
             "type": "shell",
             "command": "docker compose build builder && docker compose run --rm builder",
+            "windows": {
+                "command": "docker compose build builder; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; docker compose run --rm builder"
+            },
             "group": {
                 "kind": "build",
                 "isDefault": true

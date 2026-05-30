@@ -1,0 +1,62 @@
+# Builds and publishes the builder Docker image to GHCR. This image is a
+# convenience artifact: docker-compose.yml pulls it so local contributors don't
+# have to build it themselves. CI itself does NOT consume it — pr-check.yml and
+# publish.yml build the builder from source. The image's only inputs live under
+# builder/, so it is rebuilt and pushed only when builder/ changes, not on every
+# widget update.
+name: Publish builder image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'builder/**'
+      - '.dockerignore'
+      - '.github/workflows/builder-image.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: builder-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILDER_IMAGE: ghcr.io/beyond-all-reason/bar-workshop-builder
+
+jobs:
+  build-and-push:
+    name: Build and push builder image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: builder/Dockerfile
+          push: true
+          tags: |
+            ${{ env.BUILDER_IMAGE }}:latest
+            ${{ env.BUILDER_IMAGE }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=GPL-2.0-or-later
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

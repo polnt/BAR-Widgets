@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/beyond-all-reason/Public-BAR-Widgets/schemas/manifests.schema.json",
+  "title": "BAR Workshop manifests",
+  "description": "Schema for the merged build/manifests.json catalog.",
+  "type": "array",
+  "minItems": 1,
+  "uniqueItems": true,
+  "items": {
+    "$ref": "#/definitions/widgetManifest"
+  },
+  "definitions": {
+    "widgetId": {
+      "type": "string",
+      "description": "Lower snake case id with a scope prefix, for example gui_example.",
+      "pattern": "^[a-z][a-z0-9]*_[a-z0-9]+(?:_[a-z0-9]+)*$"
+    },
+    "link": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uri"
+        },
+        {
+          "const": ""
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "widgetManifest": {
+      "type": "object",
+      "required": [
+        "id",
+        "display_name",
+        "author",
+        "discord_link",
+        "github_link",
+        "description",
+        "last_updated"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/widgetId"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1
+        },
+        "discord_link": {
+          "$ref": "#/definitions/link"
+        },
+        "github_link": {
+          "$ref": "#/definitions/link"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 1000
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

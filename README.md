@@ -23,13 +23,15 @@ There are **two ways** to contribute:
 ```
 
 
-Please follow the naming conventions used by other widgets. While there are no strict rules, use prefixes such as `gui_`, `cmd_`, or `unit_` to indicate the scope of your widget. Use `gui_lower_snake_case` for consistency.
+The widget directory name is the widget ID. It must be globally unique, lower snake case, and include a scope prefix such as `gui_`, `cmd_`, `unit_`, or `map_`. The `id` in `manifest.json` must match this directory name exactly, for example `gui_lower_snake_case`.
+
+Each widget directory must stay under 5 MiB.
 
 
 
 ## manifest.json
 
-Ensure your `id` is globally unique; avoid using common or generic IDs.
+Ensure your `id` is globally unique, has a scope prefix, and matches the root directory of the widget. Avoid using common or generic IDs.
 
 Your `manifest.json` must include the following fields:
 
@@ -47,6 +49,12 @@ Your `manifest.json` must include the following fields:
 ```
 
 The `last_updated` field is an ISO 8601 timestamp used to sort widgets by recency. Update it whenever you publish a new version.
+
+The merged catalog is validated during the build against [builder/schemas/manifests.schema.json](builder/schemas/manifests.schema.json). The same schema is copied into the generated `build/` output as `manifests.schema.json`.
+
+# License
+
+This repository is licensed under the GNU General Public License, version 2 or later. See [LICENSE](LICENSE) for details.
 
 # What is Allowed?
 

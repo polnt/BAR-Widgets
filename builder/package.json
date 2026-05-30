@@ -2,19 +2,21 @@
   "name": "bar-widgets-builder",
   "version": "1.0.0",
   "private": true,
+  "license": "GPL-2.0-or-later",
   "type": "module",
   "scripts": {
     "build": "tsx src/build.ts"
   },
   "dependencies": {
-    "archiver": "^7.0.0",
-    "glob": "^11.0.0",
-    "sharp": "^0.33.0"
+    "ajv": "^8.20.0",
+    "archiver": "^8.0.0",
+    "glob": "^13.0.6",
+    "sharp": "^0.34.5",
+    "tsx": "^4.0.0"
   },
   "devDependencies": {
-    "@types/archiver": "^6.0.0",
+    "@types/archiver": "^7.0.0",
     "@types/node": "^22.0.0",
-    "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   }
 }
