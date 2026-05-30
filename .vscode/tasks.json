@@ -15,7 +15,7 @@
         {
             "label": "push image",
             "type": "shell",
-            "command": "docker push ghcr.io/wybrenkoelmans/bar-workshop-builder:latest",
+            "command": "docker push ghcr.io/beyond-all-reason/bar-workshop-builder:latest",
             "problemMatcher": []
         }
     ]
