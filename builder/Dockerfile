@@ -1,6 +1,6 @@
 FROM node:22-slim
 
-LABEL org.opencontainers.image.source=https://github.com/beyond-all-reason/Public-BAR-Widgets
+LABEL org.opencontainers.image.source=https://github.com/beyond-all-reason/BAR-Widgets
 LABEL org.opencontainers.image.description="BAR Workshop builder"
 LABEL org.opencontainers.image.licenses="GPL-3.0"
 
