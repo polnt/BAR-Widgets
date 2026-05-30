@@ -1,4 +1,4 @@
-FROM node:22-slim
+FROM node:26-slim
 
 LABEL org.opencontainers.image.source=https://github.com/beyond-all-reason/BAR-Widgets
 LABEL org.opencontainers.image.description="BAR Workshop builder"
