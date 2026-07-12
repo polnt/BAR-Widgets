@@ -1,0 +1,9 @@
+{
+	"id": "cmd_pipette_build",
+	"display_name": "Pipette Build",
+	"author": "Errrrrrr",
+	"discord_link": "https://discord.com/channels/549281623154229250/1114221140928368780",
+	"github_link": "https://github.com/zxbc/BAR_widgets/blob/main/cmd_pipette_build.lua",
+	"description": "Copy a blueprint of the unit/building under the mouse cursor. Default keybind 'shift-q'. If you copy on top of empty space, the previously successfully copied blueprint will be used again.",
+	"last_updated": "2026-07-12T00:00:00.000Z"
+}

@@ -1,0 +1,9 @@
+{
+	"id": "gui_ping_wheel",
+	"display_name": "Ping Wheel",
+	"author": "Errrrrrr",
+	"discord_link": "https://discord.com/channels/549281623154229250/1121129869565239306",
+	"github_link": "https://github.com/SSJGabraham/Ping-Wheel",
+	"description": "Displays a ping wheel when a keybind is held down (default Alt+F). Left click for commands, right click for messages.",
+	"last_updated": "2026-07-12T00:00:00.000Z"
+}

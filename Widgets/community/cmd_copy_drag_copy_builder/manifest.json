@@ -1,0 +1,9 @@
+{
+	"id": "cmd_copy_drag_copy_builder",
+	"display_name": "Clone Builder (Drag‑Copy)",
+	"author": "Armis71",
+	"discord_link": "https://discord.com/channels/549281623154229250/1525551287301574717",
+	"github_link": "https://github.com/Armis71/BAR-Widgets-Public/blob/main/drag_copy_builder.lua",
+	"description": "Builds clones of what you have on the map already, highlight and drag.",
+	"last_updated": "2026-07-12T00:00:00.000Z"
+}

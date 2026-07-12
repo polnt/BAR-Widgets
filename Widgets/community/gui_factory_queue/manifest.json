@@ -1,0 +1,9 @@
+{
+	"id": "gui_factory_queue",
+	"display_name": "Factory Queue",
+	"author": "GammaPath",
+	"discord_link": "https://discord.com/channels/549281623154229250/1513240802783133847",
+	"github_link": "",
+	"description": "Shows and lets you reorder the selected factory's production queue",
+	"last_updated": "2026-07-12T00:00:00.000Z"
+}

@@ -1,0 +1,9 @@
+{
+	"id": "gui_build_placement_cost",
+	"display_name": "Build Placement Cost",
+	"author": "lov",
+	"discord_link": "https://discord.com/channels/549281623154229250/1487212028081999912",
+	"github_link": "",
+	"description": "Shows which constructors can help with a planned building, the maximum resource drain of all the constructors nearby, and the build ETA at full build speed",
+	"last_updated": "2026-07-12T00:00:00.000Z"
+}
