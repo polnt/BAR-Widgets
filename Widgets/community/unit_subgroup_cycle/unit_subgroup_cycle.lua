@@ -10,11 +10,9 @@ function widget:GetInfo()
     }
 end
 
--- Tab's key code. Hardcoded rather than read from a keybind, since custom
--- widget hotkeys aren't currently rebindable through uikeys.txt in BAR (see
--- README "Design notes"). Value is stable across engine versions (same as
--- the ASCII tab character).
-local TAB_KEYCODE = 9
+-- Bindable action name (see README "Design notes"). Rebind with e.g.
+-- `bind <key> subgroup_cycle` in your own uikeys.txt, or live via /bind.
+local ACTION_NAME = "subgroup_cycle"
 
 -- Cycle state
 local baseSelection     = {}   -- full mixed selection when the cycle started
@@ -191,17 +189,9 @@ function widget:DrawScreen()
     gl.Color(1, 1, 1, 1)
 end
 
-function widget:Initialize()
-    refreshGlobalUnitOrder()
-    widget:ViewResize()
-end
-
-function widget:KeyPress(key, mods, isRepeat)
-    if key ~= TAB_KEYCODE then return false end
-    if mods.alt or mods.ctrl or mods.meta then return false end
-
+local function CycleAction()
     local selected = Spring.GetSelectedUnits()
-    if #selected == 0 then return false end
+    if #selected == 0 then return end
 
     if not selectionsMatch(selected, lastAppliedSubset) then
         baseSelection = selected
@@ -210,11 +200,7 @@ function widget:KeyPress(key, mods, isRepeat)
     end
 
     if #typeOrder <= 1 then
-        return false
-    end
-
-    if isRepeat then
-        return true
+        return
     end
 
     cycleIndex = cycleIndex + 1
@@ -237,8 +223,48 @@ function widget:KeyPress(key, mods, isRepeat)
     showOverlay       = true
 
     Spring.SelectUnitArray(subset)
+end
 
-    return true
+-- Whatever's natively bound to plain Tab (e.g. GRID's "selectcomm focus"),
+-- snapshotted in Initialize so Shutdown can restore it exactly. Only set
+-- when we actually claim Tab as the default (see widget:Initialize).
+local savedTabBindings = nil
+local didAutoBindTab    = false
+
+function widget:Initialize()
+    refreshGlobalUnitOrder()
+    widget:ViewResize()
+
+    widgetHandler:AddAction(ACTION_NAME, CycleAction, nil, "p")
+
+    -- Only claim Tab as a default if the player hasn't already bound this
+    -- action to a key of their own choosing (e.g. via their own uikeys.txt).
+    -- That way rebinding away from Tab is respected instead of being
+    -- fought on every widget load.
+    local existingHotkeys = Spring.GetActionHotKeys(ACTION_NAME)
+    if not existingHotkeys or #existingHotkeys == 0 then
+        -- BAR's GRID keyset binds "selectcomm focus" to plain Tab in its own
+        -- uikeys.txt, loaded before this widget ever runs. Actions bound to
+        -- the same keyset are tried in bind order with first match winning,
+        -- so that native binding always wins the race regardless of how we
+        -- listen for Tab -- it has to be cleared for cycling to work at all.
+        -- Freeing it here only edits this session's live keyset, never the
+        -- user's uikeys.txt file, so Shutdown below restores it exactly.
+        savedTabBindings = Spring.GetKeyBindings("tab")
+        Spring.SendCommands("unbindkeyset tab")
+        Spring.SendCommands("bind tab " .. ACTION_NAME)
+        didAutoBindTab = true
+    end
+end
+
+function widget:Shutdown()
+    if not didAutoBindTab then return end
+
+    Spring.SendCommands("unbindkeyset tab")
+    for _, kb in ipairs(savedTabBindings or {}) do
+        local action = (kb.extra ~= "" and (kb.command .. " " .. kb.extra)) or kb.command
+        Spring.SendCommands("bind tab " .. action)
+    end
 end
 
 function widget:SelectionChanged(sel)

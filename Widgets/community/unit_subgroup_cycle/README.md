@@ -1,10 +1,10 @@
 # Subgroup Cycle
 
 Adds a StarCraft 2-style "subgroup cycling" behavior to control groups: select a mixed
-control group (e.g. frigates + destroyers all bound to `1`), then press **Tab** (current
-key, see "Design notes" below) to cycle through selecting just one unit type at a time,
-in the same order they appear in the control-group panel. Press the control group's
-number key again to go back to selecting everyone.
+control group (e.g. frigates + destroyers all bound to `1`), then press **Tab** (default
+key, rebindable -- see "Design notes" below) to cycle through selecting just one unit type
+at a time, in the same order they appear in the control-group panel. Press the control
+group's number key again to go back to selecting everyone.
 
 ## Why
 
@@ -24,12 +24,15 @@ that specific behavior.
 4. Click elsewhere, deselect, or select something else entirely, and the cycle resets
    automatically the next time you use it.
 
-If your current selection only contains a single unit type to begin with, Tab is left
-untouched, so it won't interfere with anything else Tab is normally used for.
+If your current selection only contains a single unit type to begin with, pressing the
+cycle key is a no-op.
 
 > **If you use the GRID keyset:** Tab is bound there by default to "Select Commander",
-> which conflicts with this widget. See "Design notes" below -- you'll likely need to run
-> `/unbindkeyset tab` before cycling works.
+> which would otherwise conflict with this widget. The widget frees Tab up automatically
+> while it's enabled (see "Design notes" below) -- no manual `/unbindkeyset` needed. If
+> you want quick Commander selection back, rebind `selectcomm focus` to a spare key in
+> your own `uikeys.txt`. If you instead rebind `subgroup_cycle` to a different key
+> yourself, the widget notices and leaves Tab (and Commander selection) untouched.
 
 ## Visual overlay
 
@@ -49,21 +52,39 @@ selection, with no indication that you're cycling through a larger group. The ov
 
 ## Design notes
 
-**Tab is hardcoded, not read from a keybind.** Custom widget hotkeys aren't
-currently rebindable through BAR's `uikeys.txt` system, so this widget listens
-for Tab's raw key code directly. Two known consequences:
-- **If you use the GRID keyset (the default), Tab is already bound to "Select
-  Commander" there, and this conflicts with cycling.** In testing, the widget
-  does not reliably override that native binding on its own -- Tab ends up
-  focusing the Commander instead of cycling. **You need to free up Tab first**,
-  either live in chat with `/unbindkeyset tab`, or permanently by adding
-  `unbindkeyset tab` to your own `uikeys.txt`. (The Legacy keyset binds
-  Commander selection to Ctrl+C instead, so this conflict doesn't apply there.)
-  If you still want quick Commander selection after unbinding Tab, rebind that
-  action to a spare key in the same file.
-- The cycle key itself can't be changed without editing this file. A proper
-  fix would need BAR to expose a way for widgets to register a rebindable
-  action; until then this is a known limitation rather than a design choice.
+**The cycle key is a real, rebindable action, not a hardcoded key.** The widget
+registers a named action (`subgroup_cycle`) via `widgetHandler:AddAction`, the
+same mechanism BAR's other rebindable widgets use (e.g. `gui_ping_wheel.lua`'s
+`ping_wheel_on`). If you'd rather use a different key, add a line like
+`bind <key> subgroup_cycle` to your own `uikeys.txt` (or run it live via
+`/bind <key> subgroup_cycle`).
+
+**A custom bind needs the widget to reinitialize before it's picked up.** The
+"has the player already bound this?" check (below) only runs once, inside
+`widget:Initialize`. Editing `uikeys.txt` on disk doesn't do anything live -- the
+engine only reads that file at startup, or when you explicitly `/keyload` it -- and
+even binding live via `/bind <key> subgroup_cycle` mid-game won't retroactively free
+Tab if the widget already claimed it earlier that session. So after setting your own
+bind, either restart the game, or toggle the widget off and back on (or `/luaui
+reload`) so `widget:Initialize` runs again and sees the new binding.
+
+**Tab is claimed automatically on `widget:Initialize`, but only as a default.**
+BAR's GRID keyset binds `selectcomm focus` ("Select Commander") to plain Tab in its
+own `uikeys.txt`, loaded before this widget ever runs. Actions bound to the same
+keyset are tried in the order they were bound, first match wins -- so that native
+binding always wins the race against anything a widget registers later, regardless
+of whether it's a proper action or a raw key listener. Before touching anything, the
+widget checks `Spring.GetActionHotKeys("subgroup_cycle")`: if you've already bound
+`subgroup_cycle` to a key yourself (in your own `uikeys.txt`), it leaves Tab and
+your binding alone entirely -- no unbinding, no default. Only when nothing's been
+configured does it snapshot whatever's currently on Tab, clear it with
+`/unbindkeyset tab`, and bind Tab to `subgroup_cycle` itself. On `widget:Shutdown`
+(the widget being disabled/removed), it restores exactly what it found -- so on GRID,
+Tab goes back to selecting the Commander the moment the widget turns off, but only if
+it was the one that claimed Tab in the first place. All of this only touches the
+current session's live keyset; your `uikeys.txt` file itself is never modified. (The
+Legacy keyset binds Commander selection to Ctrl+C instead, so none of this applies
+there -- Tab has nothing to free up.)
 
 **The overlay doesn't modify or replace `gui_info.lua`.** The cleanest result
 would be for BAR's own "Info" panel to natively support this kind of subgroup
