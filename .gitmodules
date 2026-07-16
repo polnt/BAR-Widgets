@@ -2,3 +2,7 @@
 	path = Widgets/uBdead
 	url = https://github.com/WybrenKoelmans/BAR-Widgets.git
 	branch = widgethub
+[submodule "Widgets/tetrisface"]
+	path = Widgets/tetrisface
+	url = https://github.com/tetrisface/community-widgets.git
+	branch = main
